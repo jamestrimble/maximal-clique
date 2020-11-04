@@ -24,7 +24,7 @@ def bk(R, P, X, G):
     for v in P - G[u]:
         R.append(v)
         result += bk(R, P_ & G[v], X_ & G[v], G)
-        R.remove(v)
+        del R[-1]
         P_.remove(v)
         X_.add(v)
     return result
