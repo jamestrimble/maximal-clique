@@ -6,8 +6,6 @@
 
 using std::vector;
 
-long step_count = 0;
-
 class QuickSet
 {
     vector<int> data;
@@ -17,7 +15,7 @@ public:
     vector<int> vec;  // the elements as a list
 
     QuickSet(int n) : data(n) {}
-    
+
     auto empty() -> bool {
         return vec.empty();
     }
@@ -89,68 +87,98 @@ auto intersection_size(QuickSet & S, const vector<int> & T, const vector<bool> &
     return result;
 }
 
-auto choose_pivot(QuickSet & set_P,
-        QuickSet & set_X,
-        const vector<vector<bool>> & adjmat,
-        const vector<vector<int>> & adjlists) -> int
+class BK
 {
-    int pivot = -1;
-    int best_intersection_sz = -1;
-    for (int u : set_P.vec) {
-        int sz = intersection_size(set_P, adjlists[u], adjmat[u]);
-        if (sz > best_intersection_sz) {
-            pivot = u;
-            best_intersection_sz = sz;
-        }
-    }
-    for (int u : set_X.vec) {
-        int sz = intersection_size(set_P, adjlists[u], adjmat[u]);
-        if (sz > best_intersection_sz) {
-            pivot = u;
-            best_intersection_sz = sz;
-        }
-    }
-    return pivot;
-}
+    int n;
+    const vector<vector<bool>> & adjmat;
+    const vector<vector<int>> & adjlists;
+    vector<std::unique_ptr<QuickSet>> P_sets;
+    vector<std::unique_ptr<QuickSet>> X_sets;
+    long step_count = 0;
 
-auto bk(vector<int> & R,
-        QuickSet & P,
-        QuickSet & X,
-        const vector<vector<bool>> & adjmat,
-        const vector<vector<int>> & adjlists,
-        vector<std::unique_ptr<QuickSet>> & P_sets,
-        vector<std::unique_ptr<QuickSet>> & X_sets) -> int
-{
-    ++step_count;
-    if (P.empty()) {
-        return X.empty() ? 1 : 0;
-    }
-    if (P_sets.size() <= R.size()) {
-        P_sets.push_back(std::make_unique<QuickSet>(int(adjmat.size())));
-        X_sets.push_back(std::make_unique<QuickSet>(int(adjmat.size())));
-    }
-    QuickSet & new_P = *P_sets[R.size()];
-    QuickSet & new_X = *X_sets[R.size()];
-    int u = choose_pivot(P, X, adjmat, adjlists);
-    int result = 0;
-    for (int i=P.size(); i--; ) {
-        int v = P.vec[i];
-        if (adjmat[u][v]) {
-            continue;
+    auto choose_pivot(QuickSet & set_P,
+            QuickSet & set_X) -> int
+    {
+        int pivot = -1;
+        int best_intersection_sz = -1;
+        for (int u : set_P.vec) {
+            int sz = intersection_size(set_P, adjlists[u], adjmat[u]);
+            if (sz > best_intersection_sz) {
+                pivot = u;
+                best_intersection_sz = sz;
+            }
         }
-        intersection(P, adjlists[v], adjmat[v], new_P);
-        intersection(X, adjlists[v], adjmat[v], new_X);
-        R.push_back(v);
-        result += bk(R, new_P, new_X, adjmat, adjlists, P_sets, X_sets);
-        R.pop_back();
-
-        // remove v from P
-        P.remove_at(i);
-
-        X.add(v);
+        for (int u : set_X.vec) {
+            int sz = intersection_size(set_P, adjlists[u], adjmat[u]);
+            if (sz > best_intersection_sz) {
+                pivot = u;
+                best_intersection_sz = sz;
+            }
+        }
+        return pivot;
     }
-    return result;
-}
+
+    auto bk(vector<int> & R,
+            QuickSet & P,
+            QuickSet & X) -> long
+    {
+        ++step_count;
+        if (P.empty()) {
+            return X.empty() ? 1 : 0;
+        }
+        QuickSet & new_P = get_preallocated_set(P_sets, R.size());
+        QuickSet & new_X = get_preallocated_set(X_sets, R.size());
+        int u = choose_pivot(P, X);
+        long result = 0;
+        for (int i=P.size(); i--; ) {
+            int v = P.vec[i];
+            if (adjmat[u][v]) {
+                continue;
+            }
+            intersection(P, adjlists[v], adjmat[v], new_P);
+            intersection(X, adjlists[v], adjmat[v], new_X);
+            R.push_back(v);
+            result += bk(R, new_P, new_X);
+            R.pop_back();
+
+            // remove v from P
+            P.remove_at(i);
+
+            X.add(v);
+        }
+        return result;
+    }
+
+public:
+    BK(int n, const vector<vector<bool>> & adjmat, const vector<vector<int>> & adjlists)
+            : n(n), adjmat(adjmat), adjlists(adjlists)
+    {
+    }
+
+    auto get_preallocated_set(vector<std::unique_ptr<QuickSet>> & sets, int search_depth) -> QuickSet &
+    {
+        if (sets.size() <= search_depth) {
+            sets.push_back(std::make_unique<QuickSet>(n));
+        }
+        return *sets[search_depth];
+    }
+
+    auto count_maximal_cliques() -> long
+    {
+        vector<int> R;
+        QuickSet P(n);
+        for (int i=0; i<n; i++) {
+            P.add(i);
+        }
+        QuickSet X(n);
+        return bk(R, P, X);
+    }
+
+    auto get_step_count() -> long
+    {
+        return step_count;
+    }
+};
 
 auto main(int argc, char **argv) -> int
 {
@@ -184,15 +212,8 @@ auto main(int argc, char **argv) -> int
         std::cout << "Warning: " << (line_num - 2) << " edges read; " << m2 << " expected." << std::endl;
     }
 
-    vector<int> R;
-    QuickSet P(adjmat.size());
-    for (int i=0; i<n; i++) {
-        P.add(i);
-    }
-    QuickSet X(adjmat.size());
-    vector<std::unique_ptr<QuickSet>> P_sets;
-    vector<std::unique_ptr<QuickSet>> X_sets;
-    int result = bk(R, P, X, adjmat, adjlists, P_sets, X_sets);
-    std::cout << step_count << std::endl;
+    BK bk(n, adjmat, adjlists);
+    long result = bk.count_maximal_cliques();
+    std::cout << bk.get_step_count() << std::endl;
     std::cout << result << std::endl;
 }
