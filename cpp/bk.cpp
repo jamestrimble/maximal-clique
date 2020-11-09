@@ -14,14 +14,28 @@ class QuickSet
     int k = 1;
 
 public:
+    vector<int> vec;  // the elements as a list
+
     QuickSet(int n) : data(n) {}
     
-    auto add(int v) -> void {
-        data[v] = k;
+    auto empty() -> bool {
+        return vec.empty();
     }
 
-    auto remove(int v) -> void {
+    auto size() -> unsigned {
+        return vec.size();
+    }
+
+    auto add(int v) -> void {
+        data[v] = k;
+        vec.push_back(v);
+    }
+
+    auto remove_at(int position) -> void {
+        int v = vec[position];
         data[v] = 0;
+        vec[position] = vec.back();
+        vec.pop_back();
     }
 
     auto has(int v) -> bool {
@@ -29,6 +43,7 @@ public:
     }
 
     auto clear() -> void {
+        vec.clear();
         ++k;
         if (k == 2000000000) {
             k = 1;
@@ -39,58 +54,57 @@ public:
     }
 };
 
-auto intersection(vector<int> & S, QuickSet & S_QSet, const vector<int> & T, const vector<bool> & T_bools,
-        vector<int> & result) -> void
+auto intersection(QuickSet & S, const vector<int> & T, const vector<bool> & T_bools,
+        QuickSet & result) -> void
 {
     result.clear();
     if (S.size() < T.size()) {
-        for (int v : S) {
+        for (int v : S.vec) {
             if (T_bools[v]) {
-                result.push_back(v);
+                result.add(v);
             }
         }
     } else {
         for (int v : T) {
-            if (S_QSet.has(v)) {
-                result.push_back(v);
+            if (S.has(v)) {
+                result.add(v);
             }
         }
     }
 }
 
-auto intersection_size(vector<int> & S, QuickSet & S_QSet, const vector<int> & T, const vector<bool> & T_bools)
+auto intersection_size(QuickSet & S, const vector<int> & T, const vector<bool> & T_bools)
         -> int
 {
     int result = 0;
     if (S.size() < T.size()) {
-        for (int v : S) {
+        for (int v : S.vec) {
             result += T_bools[v];
         }
     } else {
         for (int v : T) {
-            result += S_QSet.has(v);
+            result += S.has(v);
         }
     }
     return result;
 }
 
-auto choose_pivot(vector<int> & P,
-        QuickSet & set_P,
-        vector<int> & X,
+auto choose_pivot(QuickSet & set_P,
+        QuickSet & set_X,
         const vector<vector<bool>> & adjmat,
         const vector<vector<int>> & adjlists) -> int
 {
     int pivot = -1;
     int best_intersection_sz = -1;
-    for (int u : P) {
-        int sz = intersection_size(P, set_P, adjlists[u], adjmat[u]);
+    for (int u : set_P.vec) {
+        int sz = intersection_size(set_P, adjlists[u], adjmat[u]);
         if (sz > best_intersection_sz) {
             pivot = u;
             best_intersection_sz = sz;
         }
     }
-    for (int u : X) {
-        int sz = intersection_size(P, set_P, adjlists[u], adjmat[u]);
+    for (int u : set_X.vec) {
+        int sz = intersection_size(set_P, adjlists[u], adjmat[u]);
         if (sz > best_intersection_sz) {
             pivot = u;
             best_intersection_sz = sz;
@@ -100,14 +114,12 @@ auto choose_pivot(vector<int> & P,
 }
 
 auto bk(vector<int> & R,
-        vector<int> & P,
-        vector<int> & X,
+        QuickSet & P,
+        QuickSet & X,
         const vector<vector<bool>> & adjmat,
         const vector<vector<int>> & adjlists,
         vector<std::unique_ptr<QuickSet>> & P_sets,
-        vector<std::unique_ptr<QuickSet>> & X_sets,
-        vector<std::unique_ptr<vector<int>>> & new_Ps,
-        vector<std::unique_ptr<vector<int>>> & new_Xs) -> int
+        vector<std::unique_ptr<QuickSet>> & X_sets) -> int
 {
     ++step_count;
     if (P.empty()) {
@@ -116,41 +128,26 @@ auto bk(vector<int> & R,
     if (P_sets.size() <= R.size()) {
         P_sets.push_back(std::make_unique<QuickSet>(int(adjmat.size())));
         X_sets.push_back(std::make_unique<QuickSet>(int(adjmat.size())));
-        new_Ps.push_back(std::make_unique<vector<int>>());
-        new_Xs.push_back(std::make_unique<vector<int>>());
     }
-    QuickSet & set_P = *P_sets[R.size()];
-    QuickSet & set_X = *X_sets[R.size()];
-    set_P.clear();
-    set_X.clear();
-    for (int v : P) {
-        set_P.add(v);
-    }
-    for (int v : X) {
-        set_X.add(v);
-    }
-    int u = choose_pivot(P, set_P, X, adjmat, adjlists);
+    int u = choose_pivot(P, X, adjmat, adjlists);
     int result = 0;
     for (int i=P.size(); i--; ) {
-        int v = P[i];
+        int v = P.vec[i];
         if (adjmat[u][v]) {
             continue;
         }
-        vector<int> & new_P = *new_Ps[R.size()];
-        vector<int> & new_X = *new_Xs[R.size()];
-        intersection(P, set_P, adjlists[v], adjmat[v], new_P);
-        intersection(X, set_X, adjlists[v], adjmat[v], new_X);
+        QuickSet & new_P = *P_sets[R.size()];
+        QuickSet & new_X = *X_sets[R.size()];
+        intersection(P, adjlists[v], adjmat[v], new_P);
+        intersection(X, adjlists[v], adjmat[v], new_X);
         R.push_back(v);
-        result += bk(R, new_P, new_X, adjmat, adjlists, P_sets, X_sets, new_Ps, new_Xs);
+        result += bk(R, new_P, new_X, adjmat, adjlists, P_sets, X_sets);
         R.pop_back();
 
         // remove v from P
-        P[i] = P.back();
-        P.pop_back();
-        set_P.remove(v);
+        P.remove_at(i);
 
-        X.push_back(v);
-        set_X.add(v);
+        X.add(v);
     }
     return result;
 }
@@ -188,17 +185,14 @@ auto main(int argc, char **argv) -> int
     }
 
     vector<int> R;
-    vector<int> P;
-    P.reserve(n);
+    QuickSet P(adjmat.size());
     for (int i=0; i<n; i++) {
-        P.push_back(i);
+        P.add(i);
     }
-    vector<int> X;
+    QuickSet X(adjmat.size());
     vector<std::unique_ptr<QuickSet>> P_sets;
     vector<std::unique_ptr<QuickSet>> X_sets;
-    vector<std::unique_ptr<vector<int>>> new_Ps;
-    vector<std::unique_ptr<vector<int>>> new_Xs;
-    int result = bk(R, P, X, adjmat, adjlists, P_sets, X_sets, new_Ps, new_Xs);
+    int result = bk(R, P, X, adjmat, adjlists, P_sets, X_sets);
     std::cout << step_count << std::endl;
     std::cout << result << std::endl;
 }
