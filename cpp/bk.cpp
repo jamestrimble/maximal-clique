@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -57,26 +58,6 @@ auto intersection(vector<int> & S, QuickSet & S_QSet, const vector<int> & T, con
     }
 }
 
-auto intersection(vector<int> & S, QuickSet & S_QSet, const vector<int> & T, const vector<bool> & T_bools)
-        -> vector<int>
-{
-    vector<int> result;
-    if (S.size() < T.size()) {
-        for (int v : S) {
-            if (T_bools[v]) {
-                result.push_back(v);
-            }
-        }
-    } else {
-        for (int v : T) {
-            if (S_QSet.has(v)) {
-                result.push_back(v);
-            }
-        }
-    }
-    return result;
-}
-
 auto intersection_size(vector<int> & S, QuickSet & S_QSet, const vector<int> & T, const vector<bool> & T_bools)
         -> int
 {
@@ -91,26 +72,6 @@ auto intersection_size(vector<int> & S, QuickSet & S_QSet, const vector<int> & T
         }
     }
     return result;
-}
-
-auto intersection_is_empty(vector<int> & S, QuickSet & S_QSet, const vector<int> & T, const vector<bool> & T_bools)
-        -> bool
-{
-    int result = 0;
-    if (S.size() < T.size()) {
-        for (int v : S) {
-            if (T_bools[v]) {
-                return false;
-            }
-        }
-    } else {
-        for (int v : T) {
-            if (S_QSet.has(v)) {
-                return false;
-            }
-        }
-    }
-    return true;
 }
 
 auto choose_pivot(vector<int> & P,
@@ -175,17 +136,13 @@ auto bk(vector<int> & R,
         if (adjmat[u][v]) {
             continue;
         }
-        if (intersection_is_empty(P, set_P, adjlists[v], adjmat[v])) {
-            result += intersection_is_empty(X, set_X, adjlists[v], adjmat[v]);
-        } else {
-            vector<int> & new_P = *new_Ps[R.size()];
-            vector<int> & new_X = *new_Xs[R.size()];
-            intersection(P, set_P, adjlists[v], adjmat[v], new_P);
-            intersection(X, set_X, adjlists[v], adjmat[v], new_X);
-            R.push_back(v);
-            result += bk(R, new_P, new_X, adjmat, adjlists, P_sets, X_sets, new_Ps, new_Xs);
-            R.pop_back();
-        }
+        vector<int> & new_P = *new_Ps[R.size()];
+        vector<int> & new_X = *new_Xs[R.size()];
+        intersection(P, set_P, adjlists[v], adjmat[v], new_P);
+        intersection(X, set_X, adjlists[v], adjmat[v], new_X);
+        R.push_back(v);
+        result += bk(R, new_P, new_X, adjmat, adjlists, P_sets, X_sets, new_Ps, new_Xs);
+        R.pop_back();
 
         // remove v from P
         P[i] = P.back();
