@@ -115,12 +115,20 @@ auto intersection_is_empty(vector<int> & S, QuickSet & S_QSet, const vector<int>
 
 auto choose_pivot(vector<int> & P,
         QuickSet & set_P,
+        vector<int> & X,
         const vector<vector<bool>> & adjmat,
         const vector<vector<int>> & adjlists) -> int
 {
     int pivot = -1;
     int best_intersection_sz = -1;
     for (int u : P) {
+        int sz = intersection_size(P, set_P, adjlists[u], adjmat[u]);
+        if (sz > best_intersection_sz) {
+            pivot = u;
+            best_intersection_sz = sz;
+        }
+    }
+    for (int u : X) {
         int sz = intersection_size(P, set_P, adjlists[u], adjmat[u]);
         if (sz > best_intersection_sz) {
             pivot = u;
@@ -160,7 +168,7 @@ auto bk(vector<int> & R,
     for (int v : X) {
         set_X.add(v);
     }
-    int u = choose_pivot(P, set_P, adjmat, adjlists);
+    int u = choose_pivot(P, set_P, X, adjmat, adjlists);
     int result = 0;
     for (int i=P.size(); i--; ) {
         int v = P[i];
