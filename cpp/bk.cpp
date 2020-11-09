@@ -101,14 +101,14 @@ class BK
     {
         int pivot = -1;
         int best_intersection_sz = -1;
-        for (int u : set_P.vec) {
+        for (int u : set_X.vec) {
             int sz = intersection_size(set_P, adjlists[u], adjmat[u]);
             if (sz > best_intersection_sz) {
                 pivot = u;
                 best_intersection_sz = sz;
             }
         }
-        for (int u : set_X.vec) {
+        for (int u : set_P.vec) {
             int sz = intersection_size(set_P, adjlists[u], adjmat[u]);
             if (sz > best_intersection_sz) {
                 pivot = u;
