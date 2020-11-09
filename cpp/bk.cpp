@@ -5,6 +5,8 @@
 
 using std::vector;
 
+long step_count = 0;
+
 class QuickSet
 {
     vector<int> data;
@@ -138,6 +140,7 @@ auto bk(vector<int> & R,
         vector<std::unique_ptr<vector<int>>> & new_Ps,
         vector<std::unique_ptr<vector<int>>> & new_Xs) -> int
 {
+    ++step_count;
     if (P.empty()) {
         return X.empty() ? 1 : 0;
     }
@@ -231,5 +234,6 @@ auto main(int argc, char **argv) -> int
     vector<std::unique_ptr<vector<int>>> new_Ps;
     vector<std::unique_ptr<vector<int>>> new_Xs;
     int result = bk(R, P, X, adjmat, adjlists, P_sets, X_sets, new_Ps, new_Xs);
+    std::cout << step_count << std::endl;
     std::cout << result << std::endl;
 }
