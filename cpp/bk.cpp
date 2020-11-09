@@ -129,6 +129,8 @@ auto bk(vector<int> & R,
         P_sets.push_back(std::make_unique<QuickSet>(int(adjmat.size())));
         X_sets.push_back(std::make_unique<QuickSet>(int(adjmat.size())));
     }
+    QuickSet & new_P = *P_sets[R.size()];
+    QuickSet & new_X = *X_sets[R.size()];
     int u = choose_pivot(P, X, adjmat, adjlists);
     int result = 0;
     for (int i=P.size(); i--; ) {
@@ -136,8 +138,6 @@ auto bk(vector<int> & R,
         if (adjmat[u][v]) {
             continue;
         }
-        QuickSet & new_P = *P_sets[R.size()];
-        QuickSet & new_X = *X_sets[R.size()];
         intersection(P, adjlists[v], adjmat[v], new_P);
         intersection(X, adjlists[v], adjmat[v], new_X);
         R.push_back(v);
