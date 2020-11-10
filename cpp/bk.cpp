@@ -10,11 +10,20 @@ class QuickSet
 {
     vector<int> data;
     int k = 1;
+    vector<int> position_in_vec;
 
 public:
     vector<int> vec;  // the elements as a list
 
-    QuickSet(int n) : data(n) {}
+    QuickSet(int n) : data(n), position_in_vec(n) {}
+
+    auto begin() {
+        return vec.cbegin();
+    }
+
+    auto end() {
+        return vec.cend();
+    }
 
     auto empty() -> bool {
         return vec.empty();
@@ -26,13 +35,16 @@ public:
 
     auto add(int v) -> void {
         data[v] = k;
+        position_in_vec[v] = vec.size();
         vec.push_back(v);
     }
 
-    auto remove_at(int position) -> void {
-        int v = vec[position];
+    auto remove(int v) -> void {
+        int position = position_in_vec[v];
         data[v] = 0;
-        vec[position] = vec.back();
+        int w = vec.back();
+        position_in_vec[w] = position;
+        vec[position] = w;
         vec.pop_back();
     }
 
@@ -57,7 +69,7 @@ auto intersection(QuickSet & S, const vector<int> & T, const vector<bool> & T_bo
 {
     result.clear();
     if (S.size() < T.size()) {
-        for (int v : S.vec) {
+        for (int v : S) {
             if (T_bools[v]) {
                 result.add(v);
             }
@@ -76,7 +88,7 @@ auto intersection_size(QuickSet & S, const vector<int> & T, const vector<bool> &
 {
     int result = 0;
     if (S.size() < T.size()) {
-        for (int v : S.vec) {
+        for (int v : S) {
             result += T_bools[v];
         }
     } else {
@@ -94,6 +106,7 @@ class BK
     const vector<vector<int>> & adjlists;
     vector<std::unique_ptr<QuickSet>> P_sets;
     vector<std::unique_ptr<QuickSet>> X_sets;
+    vector<std::unique_ptr<vector<int>>> branching_lists;
     long step_count = 0;
 
     auto choose_pivot(QuickSet & set_P,
@@ -104,7 +117,7 @@ class BK
         QuickSet * sets[] = {&set_X, &set_P};
         for (int i=0; i<2; i++) {
             QuickSet & set = *sets[i];
-            for (int u : set.vec) {
+            for (int u : set) {
                 int sz = intersection_size(set_P, adjlists[u], adjmat[u]);
                 if (sz > best_intersection_sz) {
                     pivot = u;
@@ -115,6 +128,15 @@ class BK
         return pivot;
     }
 
+    template<typename T>
+    auto get_preallocated_item(vector<std::unique_ptr<T>> & items, int search_depth) -> T &
+    {
+        if (items.size() <= search_depth) {
+            items.push_back(std::make_unique<T>(n));
+        }
+        return *items[search_depth];
+    }
+
     auto bk(vector<int> & R,
             QuickSet & P,
             QuickSet & X) -> long
@@ -123,24 +145,28 @@ class BK
         if (P.empty()) {
             return X.empty() ? 1 : 0;
         }
-        QuickSet & new_P = get_preallocated_set(P_sets, R.size());
-        QuickSet & new_X = get_preallocated_set(X_sets, R.size());
+        QuickSet & new_P = get_preallocated_item(P_sets, R.size());
+        QuickSet & new_X = get_preallocated_item(X_sets, R.size());
         int u = choose_pivot(P, X);
         long result = 0;
-        for (int i=P.size(); i--; ) {
-            int v = P.vec[i];
+        auto & branching_vertices = get_preallocated_item(branching_lists, R.size());
+        branching_vertices.clear();
+        for (int v : P) {
             if (adjmat[u][v]) {
                 continue;
             }
+            branching_vertices.push_back(v);
+        }
+//j        std::sort(branching_vertices.begin(), branching_vertices.end(),
+//j                [&](int v, int w){return adjlists[v].size() < adjlists[w].size();});
+        std::sort(branching_vertices.begin(), branching_vertices.end());
+        for (int v : branching_vertices) {
             intersection(P, adjlists[v], adjmat[v], new_P);
             intersection(X, adjlists[v], adjmat[v], new_X);
             R.push_back(v);
             result += bk(R, new_P, new_X);
             R.pop_back();
-
-            // remove v from P
-            P.remove_at(i);
-
+            P.remove(v);
             X.add(v);
         }
         return result;
@@ -150,14 +176,6 @@ public:
     BK(int n, const vector<vector<bool>> & adjmat, const vector<vector<int>> & adjlists)
             : n(n), adjmat(adjmat), adjlists(adjlists)
     {
-    }
-
-    auto get_preallocated_set(vector<std::unique_ptr<QuickSet>> & sets, int search_depth) -> QuickSet &
-    {
-        if (sets.size() <= search_depth) {
-            sets.push_back(std::make_unique<QuickSet>(n));
-        }
-        return *sets[search_depth];
     }
 
     auto count_maximal_cliques() -> long
@@ -209,7 +227,28 @@ auto main(int argc, char **argv) -> int
         std::cout << "Warning: " << (line_num - 2) << " edges read; " << m2 << " expected." << std::endl;
     }
 
-    BK bk(n, adjmat, adjlists);
+    vector<int> order;         // vertex map from ordered to input graph
+    vector<int> order_inv(n);  // vertex map from input to ordered graph
+    for (int i=0; i<n; i++) {
+        order.push_back(i);
+    }
+    std::sort(order.begin(), order.end(),
+            [&](int v, int w){return adjlists[v].size() < adjlists[w].size();});
+    for (int v=0; v<n; v++) {
+        order_inv[order[v]] = v;
+    }
+    auto ordered_adjmat = vector<vector<bool>>(n, vector<bool>(n));
+    auto ordered_adjlists = vector<vector<int>>(n);
+    for (int v=0; v<n; v++) {
+        for (int w : adjlists[v]) {
+            int new_v = order_inv[v];
+            int new_w = order_inv[w];
+            ordered_adjlists[new_v].push_back(new_w);
+            ordered_adjmat[new_v][new_w] = true;
+        }
+    }
+
+    BK bk(n, ordered_adjmat, ordered_adjlists);
     long result = bk.count_maximal_cliques();
     std::cout << bk.get_step_count() << std::endl;
     std::cout << result << std::endl;
