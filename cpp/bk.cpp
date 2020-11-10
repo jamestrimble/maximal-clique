@@ -157,8 +157,8 @@ class BK
             }
             branching_vertices.push_back(v);
         }
-//j        std::sort(branching_vertices.begin(), branching_vertices.end(),
-//j                [&](int v, int w){return adjlists[v].size() < adjlists[w].size();});
+//        std::sort(branching_vertices.begin(), branching_vertices.end(),
+//                [&](int v, int w){return adjlists[v].size() < adjlists[w].size();});
         std::sort(branching_vertices.begin(), branching_vertices.end());
         for (int v : branching_vertices) {
             intersection(P, adjlists[v], adjmat[v], new_P);
@@ -246,6 +246,9 @@ auto main(int argc, char **argv) -> int
             ordered_adjlists[new_v].push_back(new_w);
             ordered_adjmat[new_v][new_w] = true;
         }
+    }
+    for (int v=0; v<n; v++) {
+        std::sort(ordered_adjlists[v].begin(), ordered_adjlists[v].end());
     }
 
     BK bk(n, ordered_adjmat, ordered_adjlists);
