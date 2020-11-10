@@ -120,6 +120,10 @@ class BK
             for (int u : set) {
                 int sz = intersection_size(set_P, adjlists[u], adjmat[u]);
                 if (sz > best_intersection_sz) {
+                    if (sz >= set_P.size() - 1) {
+                        // Some of Naud\'{e}'s optimisations
+                        return sz == set_P.size() ? -1 : u;
+                    }
                     pivot = u;
                     best_intersection_sz = sz;
                 }
@@ -148,14 +152,16 @@ class BK
         QuickSet & new_P = get_preallocated_item(P_sets, R.size());
         QuickSet & new_X = get_preallocated_item(X_sets, R.size());
         int u = choose_pivot(P, X);
+        if (u == -1) {
+            return 0;
+        }
         long result = 0;
         auto & branching_vertices = get_preallocated_item(branching_lists, R.size());
         branching_vertices.clear();
         for (int v : P) {
-            if (adjmat[u][v]) {
-                continue;
+            if (!adjmat[u][v]) {
+                branching_vertices.push_back(v);
             }
-            branching_vertices.push_back(v);
         }
 #ifndef WITHOUT_SORTING
         std::sort(branching_vertices.begin(), branching_vertices.end());
