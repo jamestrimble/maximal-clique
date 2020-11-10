@@ -64,7 +64,7 @@ public:
     }
 };
 
-auto intersection(QuickSet & S, const vector<int> & T, const vector<bool> & T_bools,
+auto intersection(QuickSet & S, const vector<int> & T, const vector<char> & T_bools,
         QuickSet & result) -> void
 {
     result.clear();
@@ -83,7 +83,7 @@ auto intersection(QuickSet & S, const vector<int> & T, const vector<bool> & T_bo
     }
 }
 
-auto intersection_size(QuickSet & S, const vector<int> & T, const vector<bool> & T_bools)
+auto intersection_size(QuickSet & S, const vector<int> & T, const vector<char> & T_bools)
         -> int
 {
     int result = 0;
@@ -102,7 +102,7 @@ auto intersection_size(QuickSet & S, const vector<int> & T, const vector<bool> &
 class BK
 {
     int n;
-    const vector<vector<bool>> & adjmat;
+    const vector<vector<char>> & adjmat;
     const vector<vector<int>> & adjlists;
     vector<std::unique_ptr<QuickSet>> P_sets;
     vector<std::unique_ptr<QuickSet>> X_sets;
@@ -173,7 +173,7 @@ class BK
     }
 
 public:
-    BK(int n, const vector<vector<bool>> & adjmat, const vector<vector<int>> & adjlists)
+    BK(int n, const vector<vector<char>> & adjmat, const vector<vector<int>> & adjlists)
             : n(n), adjmat(adjmat), adjlists(adjlists)
     {
     }
@@ -200,7 +200,7 @@ auto main(int argc, char **argv) -> int
     int n = 0;
     int m2 = 0;
 
-    vector<vector<bool>> adjmat;
+    vector<vector<char>> adjmat;
     vector<vector<int>> adjlists;
 
     int line_num = 0;
@@ -215,7 +215,7 @@ auto main(int argc, char **argv) -> int
             adjlists[v].push_back(w);
         } else if (line_num == 0) {
             n = std::stoi(line);
-            adjmat = vector<vector<bool>>(n, vector<bool>(n));
+            adjmat = vector<vector<char>>(n, vector<char>(n));
             adjlists = vector<vector<int>>(n);
         } else {
             m2 = std::stoi(line);
@@ -237,7 +237,7 @@ auto main(int argc, char **argv) -> int
     for (int v=0; v<n; v++) {
         order_inv[order[v]] = v;
     }
-    auto ordered_adjmat = vector<vector<bool>>(n, vector<bool>(n));
+    auto ordered_adjmat = vector<vector<char>>(n, vector<char>(n));
     auto ordered_adjlists = vector<vector<int>>(n);
     for (int v=0; v<n; v++) {
         for (int w : adjlists[v]) {
