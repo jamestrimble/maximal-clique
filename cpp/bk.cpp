@@ -157,9 +157,9 @@ class BK
             }
             branching_vertices.push_back(v);
         }
-//        std::sort(branching_vertices.begin(), branching_vertices.end(),
-//                [&](int v, int w){return adjlists[v].size() < adjlists[w].size();});
+#ifndef WITHOUT_SORTING
         std::sort(branching_vertices.begin(), branching_vertices.end());
+#endif
         for (int v : branching_vertices) {
             intersection(P, adjlists[v], adjmat[v], new_P);
             intersection(X, adjlists[v], adjmat[v], new_X);
@@ -227,6 +227,9 @@ auto main(int argc, char **argv) -> int
         std::cout << "Warning: " << (line_num - 2) << " edges read; " << m2 << " expected." << std::endl;
     }
 
+#ifdef WITHOUT_SORTING
+    BK bk(n, adjmat, adjlists);
+#else
     vector<int> order;         // vertex map from ordered to input graph
     vector<int> order_inv(n);  // vertex map from input to ordered graph
     for (int i=0; i<n; i++) {
@@ -250,8 +253,8 @@ auto main(int argc, char **argv) -> int
     for (int v=0; v<n; v++) {
         std::sort(ordered_adjlists[v].begin(), ordered_adjlists[v].end());
     }
-
     BK bk(n, ordered_adjmat, ordered_adjlists);
+#endif
     long result = bk.count_maximal_cliques();
     std::cout << bk.get_step_count() << std::endl;
     std::cout << result << std::endl;
