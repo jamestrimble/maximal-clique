@@ -6,58 +6,64 @@
 
 using std::vector;
 
+/** A set of integers in the range [0,n) with fast operations for insertion,
+ *  deletion, clearing, and iterating in an unspecified order.
+ */
 class QuickSet
 {
-    vector<int> data;
+    vector<int> is_member;  //!< v is in the set if and only iff if
+                            //!< is_member[v] == k
     int k = 1;
-    vector<int> position_in_vec;
+    vector<int> vec;        //!< a list of the set's elements
+    int vec_len = 0;        //!< The number of elements in vec (vec is used
+                            //!< like a C-style array for speed)
+    vector<int> position_in_vec;  //!< if v is in the set, then
+                                  //!< vec[position_in_vec[v]] == v
 
 public:
-    vector<int> vec;  // the elements as a list
-
-    QuickSet(int n) : data(n), position_in_vec(n) {}
+    QuickSet(int n) : is_member(n), vec(n), position_in_vec(n) {}
 
     auto begin() {
         return vec.cbegin();
     }
 
     auto end() {
-        return vec.cend();
+        return vec.cbegin() + vec_len;
     }
 
     auto empty() -> bool {
-        return vec.empty();
+        return vec_len == 0;
     }
 
-    auto size() -> unsigned {
-        return vec.size();
+    auto size() -> int {
+        return vec_len;
     }
 
     auto add(int v) -> void {
-        data[v] = k;
-        position_in_vec[v] = vec.size();
-        vec.push_back(v);
+        is_member[v] = k;
+        position_in_vec[v] = vec_len;
+        vec[vec_len++] = v;
     }
 
     auto remove(int v) -> void {
         int position = position_in_vec[v];
-        data[v] = 0;
-        int w = vec.back();
+        is_member[v] = 0;
+        int w = vec[vec_len - 1];
         position_in_vec[w] = position;
         vec[position] = w;
-        vec.pop_back();
+        --vec_len;
     }
 
     auto has(int v) -> bool {
-        return data[v] == k;
+        return is_member[v] == k;
     }
 
     auto clear() -> void {
-        vec.clear();
+        vec_len = 0;
         ++k;
         if (k == 2000000000) {
             k = 1;
-            for (int & val : data) {
+            for (int & val : is_member) {
                 val = 0;
             }
         }
