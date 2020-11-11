@@ -45,6 +45,24 @@ public:
         vec[vec_len++] = v;
     }
 
+    /** A fast way to add v to vec if b is true.  After calling this (possibly
+     *  multiple times), update_to_match_vec() must be called.
+     */
+    auto add_to_vec_if(int v, bool b) -> void {
+        vec[vec_len] = v;
+        vec_len += b;
+    }
+
+    /** See add_to_vec_if().
+     */
+    auto update_to_match_vec() -> void {
+        for (int i=0; i<vec_len; i++) {
+            int v = vec[i];
+            is_member[v] = k;
+            position_in_vec[v] = i;
+        }
+    }
+
     auto remove(int v) -> void {
         int position = position_in_vec[v];
         is_member[v] = 0;
@@ -76,17 +94,14 @@ auto intersection(QuickSet & S, const vector<int> & T, const vector<char> & T_bo
     result.clear();
     if (S.size() < T.size()) {
         for (int v : S) {
-            if (T_bools[v]) {
-                result.add(v);
-            }
+            result.add_to_vec_if(v, T_bools[v]);
         }
     } else {
         for (int v : T) {
-            if (S.has(v)) {
-                result.add(v);
-            }
+            result.add_to_vec_if(v, S.has(v));
         }
     }
+    result.update_to_match_vec();
 }
 
 auto intersection_size(QuickSet & S, const vector<int> & T, const vector<char> & T_bools)
@@ -162,17 +177,22 @@ class BK
             return 0;
         }
         long result = 0;
-        auto & branching_vertices = get_preallocated_item(branching_lists, R.size());
-        branching_vertices.clear();
-        for (int v : P) {
-            if (!adjmat[u][v]) {
-                branching_vertices.push_back(v);
-            }
-        }
 #ifndef WITHOUT_SORTING
-        std::sort(branching_vertices.begin(), branching_vertices.end());
+        auto & branching_vertices = get_preallocated_item(branching_lists, R.size());
+        int branching_vertices_len = 0;
+        for (int v : P) {
+            branching_vertices[branching_vertices_len] = v;
+            branching_vertices_len += !adjmat[u][v];
+        }
+        std::sort(branching_vertices.begin(), branching_vertices.begin() + branching_vertices_len);
+        for (int i=0; i<branching_vertices_len; i++) {
+            int v = branching_vertices[i];
+#else
+        for (int v : P) {
+            if (adjmat[u][v]) {
+                continue;
+            }
 #endif
-        for (int v : branching_vertices) {
             intersection(P, adjlists[v], adjmat[v], new_P);
             intersection(X, adjlists[v], adjmat[v], new_X);
             R.push_back(v);
