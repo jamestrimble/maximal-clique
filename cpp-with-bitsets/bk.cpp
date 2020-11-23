@@ -63,15 +63,6 @@ static void bitset_intersection(const Bitset & src1,
         dst[i] = src1[i] & src2[i];
 }
 
-static void bitset_difference(const Bitset & src1,
-                                     const Bitset & src2,
-                                     Bitset & dst,
-                                     int num_words)
-{
-    for (int i=0; i<num_words; i++)
-        dst[i] = src1[i] & ~src2[i];
-}
-
 static void clear_bitset(Bitset & bitset,
                         int num_words)
 {
@@ -84,6 +75,22 @@ static void bitset_foreach(const Bitset & bitset, F f, int numwords)
 {
     for (int i=0; i<numwords; i++) {
         setword word = bitset[i];
+        while (word) {
+            int bit = __builtin_ctzll(word);
+            word ^= (1ull << bit);
+            int v = i*BITS_PER_WORD + bit;
+            f(v);
+        }
+    }
+}
+
+template<typename F>
+static void bitset_difference_foreach(const Bitset & bitset1,
+                                      const Bitset & bitset2,
+                                      F f, int numwords)
+{
+    for (int i=0; i<numwords; i++) {
+        setword word = bitset1[i] & ~bitset2[i];
         while (word) {
             int bit = __builtin_ctzll(word);
             word ^= (1ull << bit);
@@ -151,7 +158,6 @@ class BK
     const vector<vector<int>> & adjlists;
     vector<std::unique_ptr<QuickSet>> P_sets;
     vector<std::unique_ptr<QuickSet>> X_sets;
-    vector<std::unique_ptr<Bitset>> branching_bitsets;
     vector<std::unique_ptr<vector<int>>> branching_lists;
     long step_count = 0;
 
@@ -209,12 +215,10 @@ class BK
             return 0;
         }
         long result = 0;
-        auto & branching_bitset = get_preallocated_item(branching_bitsets, R.size());
-        bitset_difference(P.get_bitset(), adjmat[u], branching_bitset, num_words);
 #ifndef WITHOUT_SORTING
         auto & branching_vertices = get_preallocated_item(branching_lists, R.size());
         int branching_vertices_len = 0;
-        bitset_foreach(branching_bitset, [&](int v){
+        bitset_difference_foreach(P.get_bitset(), adjmat[u], [&](int v){
             branching_vertices[branching_vertices_len++] = v;
         }, num_words);
         std::sort(branching_vertices.begin(), branching_vertices.begin() + branching_vertices_len);
@@ -229,7 +233,7 @@ class BK
             X.add(v);
         }
 #else
-        bitset_foreach(branching_bitset, [&](int v){
+        bitset_difference_foreach(P.get_bitset(), adjmat[u], [&](int v){
             intersection(P, adjmat[v], new_P);
             intersection(X, adjmat[v], new_X);
             R.push_back(v);
