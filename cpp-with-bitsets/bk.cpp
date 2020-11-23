@@ -63,6 +63,15 @@ static void bitset_intersection(const Bitset & src1,
         dst[i] = src1[i] & src2[i];
 }
 
+static void bitset_difference(const Bitset & src1,
+                                     const Bitset & src2,
+                                     Bitset & dst,
+                                     int num_words)
+{
+    for (int i=0; i<num_words; i++)
+        dst[i] = src1[i] & ~src2[i];
+}
+
 static void clear_bitset(Bitset & bitset,
                         int num_words)
 {
@@ -146,6 +155,7 @@ class BK
     const vector<vector<int>> & adjlists;
     vector<std::unique_ptr<QuickSet>> P_sets;
     vector<std::unique_ptr<QuickSet>> X_sets;
+    vector<std::unique_ptr<Bitset>> branching_bitsets;
     vector<std::unique_ptr<vector<int>>> branching_lists;
     long step_count = 0;
 
@@ -203,12 +213,13 @@ class BK
             return 0;
         }
         long result = 0;
+        auto & branching_bitset = get_preallocated_item(branching_bitsets, R.size());
+        bitset_difference(P.get_bitset(), adjmat[u], branching_bitset, num_words);
 #ifndef WITHOUT_SORTING
         auto & branching_vertices = get_preallocated_item(branching_lists, R.size());
         int branching_vertices_len = 0;
-        bitset_foreach(P.get_bitset(), [&](int v){
-            branching_vertices[branching_vertices_len] = v;
-            branching_vertices_len += !test_bit(adjmat[u], v);
+        bitset_foreach(branching_bitset, [&](int v){
+            branching_vertices[branching_vertices_len++] = v;
         }, P.get_num_words());
         std::sort(branching_vertices.begin(), branching_vertices.begin() + branching_vertices_len);
         for (int i=0; i<branching_vertices_len; i++) {
@@ -222,10 +233,7 @@ class BK
             X.add(v);
         }
 #else
-        bitset_foreach(P.get_bitset(), [&](int v){
-            if (test_bit(adjmat[u], v)) {
-                return;
-            }
+        bitset_foreach(branching_bitset, [&](int v){
             intersection(P, adjmat[v], new_P);
             intersection(X, adjmat[v], new_X);
             R.push_back(v);
