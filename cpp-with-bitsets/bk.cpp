@@ -93,8 +93,8 @@ static void bitset_foreach(const Bitset & bitset, F f, int numwords)
     }
 }
 
-/** A set of integers in the range [0,n) with fast operations for insertion,
- *  deletion, clearing, and iterating in an unspecified order.
+/** This just wraps a Bitset.  I've written it this way because I started
+ *  with the code in the ../cpp directory.  TODO tidy.
  */
 struct QuickSet
 {
@@ -104,12 +104,8 @@ struct QuickSet
 public:
     QuickSet(int n) : num_words(WORDS_REQUIRED(n)), bitset(num_words) {}
 
-    auto & get_bitset() {
+    const auto & get_bitset() {
         return bitset;
-    }
-
-    int get_num_words() {
-        return num_words;
     }
 
     auto empty() -> bool {
@@ -167,7 +163,7 @@ class BK
         QuickSet * sets[] = {&set_X, &set_P};
         for (int i=0; i<2; i++) {
             QuickSet & set = *sets[i];
-            Bitset & bitset = set.get_bitset();
+            const Bitset & bitset = set.get_bitset();
             for (int i=0; i<num_words; i++) {
                 setword word = bitset[i];
                 while (word) {
@@ -220,7 +216,7 @@ class BK
         int branching_vertices_len = 0;
         bitset_foreach(branching_bitset, [&](int v){
             branching_vertices[branching_vertices_len++] = v;
-        }, P.get_num_words());
+        }, num_words);
         std::sort(branching_vertices.begin(), branching_vertices.begin() + branching_vertices_len);
         for (int i=0; i<branching_vertices_len; i++) {
             int v = branching_vertices[i];
@@ -241,7 +237,7 @@ class BK
             R.pop_back();
             P.remove(v);
             X.add(v);
-        }, P.get_num_words());
+        }, num_words);
 #endif
         return result;
     }
